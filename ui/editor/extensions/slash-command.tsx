@@ -11,25 +11,12 @@ import Suggestion from "@tiptap/suggestion";
 import { ReactRenderer } from "@tiptap/react";
 import { useCompletion } from "ai/react";
 import tippy from "tippy.js";
-import {
-  Heading1,
-  Heading2,
-  Heading3,
-  List,
-  ListOrdered,
-  MessageSquarePlus,
-  Text,
-  TextQuote,
-  Image as ImageIcon,
-  Code,
-  CheckSquare,
-} from "lucide-react";
 import LoadingCircle from "@/ui/icons/loading-circle";
 import { toast } from "sonner";
 import va from "@vercel/analytics";
 import Magic from "@/ui/icons/magic";
 import { getPrevText } from "@/lib/editor";
-import { startImageUpload } from "@/ui/editor/plugins/upload-images";
+import useLocalStorage from "@/lib/hooks/use-local-storage";
 
 interface CommandItemProps {
   title: string;
@@ -37,10 +24,6 @@ interface CommandItemProps {
   icon: ReactNode;
 }
 
-interface CommandProps {
-  editor: Editor;
-  range: Range;
-}
 
 const Command = Extension.create({
   name: "slash-command",
@@ -79,141 +62,6 @@ const getSuggestionItems = ({ query }: { query: string }) => {
       description: "Use AI to expand your thoughts.",
       searchTerms: ["gpt"],
       icon: <Magic className="w-7" />,
-    },
-    {
-      title: "Send Feedback",
-      description: "Let us know how we can improve.",
-      icon: <MessageSquarePlus size={18} />,
-      command: ({ editor, range }: CommandProps) => {
-        editor.chain().focus().deleteRange(range).run();
-        window.open("/feedback", "_blank");
-      },
-    },
-    {
-      title: "Text",
-      description: "Just start typing with plain text.",
-      searchTerms: ["p", "paragraph"],
-      icon: <Text size={18} />,
-      command: ({ editor, range }: CommandProps) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .toggleNode("paragraph", "paragraph")
-          .run();
-      },
-    },
-    {
-      title: "To-do List",
-      description: "Track tasks with a to-do list.",
-      searchTerms: ["todo", "task", "list", "check", "checkbox"],
-      icon: <CheckSquare size={18} />,
-      command: ({ editor, range }: CommandProps) => {
-        editor.chain().focus().deleteRange(range).toggleTaskList().run();
-      },
-    },
-    {
-      title: "Heading 1",
-      description: "Big section heading.",
-      searchTerms: ["title", "big", "large"],
-      icon: <Heading1 size={18} />,
-      command: ({ editor, range }: CommandProps) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .setNode("heading", { level: 1 })
-          .run();
-      },
-    },
-    {
-      title: "Heading 2",
-      description: "Medium section heading.",
-      searchTerms: ["subtitle", "medium"],
-      icon: <Heading2 size={18} />,
-      command: ({ editor, range }: CommandProps) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .setNode("heading", { level: 2 })
-          .run();
-      },
-    },
-    {
-      title: "Heading 3",
-      description: "Small section heading.",
-      searchTerms: ["subtitle", "small"],
-      icon: <Heading3 size={18} />,
-      command: ({ editor, range }: CommandProps) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .setNode("heading", { level: 3 })
-          .run();
-      },
-    },
-    {
-      title: "Bullet List",
-      description: "Create a simple bullet list.",
-      searchTerms: ["unordered", "point"],
-      icon: <List size={18} />,
-      command: ({ editor, range }: CommandProps) => {
-        editor.chain().focus().deleteRange(range).toggleBulletList().run();
-      },
-    },
-    {
-      title: "Numbered List",
-      description: "Create a list with numbering.",
-      searchTerms: ["ordered"],
-      icon: <ListOrdered size={18} />,
-      command: ({ editor, range }: CommandProps) => {
-        editor.chain().focus().deleteRange(range).toggleOrderedList().run();
-      },
-    },
-    {
-      title: "Quote",
-      description: "Capture a quote.",
-      searchTerms: ["blockquote"],
-      icon: <TextQuote size={18} />,
-      command: ({ editor, range }: CommandProps) =>
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .toggleNode("paragraph", "paragraph")
-          .toggleBlockquote()
-          .run(),
-    },
-    {
-      title: "Code",
-      description: "Capture a code snippet.",
-      searchTerms: ["codeblock"],
-      icon: <Code size={18} />,
-      command: ({ editor, range }: CommandProps) =>
-        editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
-    },
-    {
-      title: "Image",
-      description: "Upload an image from your computer.",
-      searchTerms: ["photo", "picture", "media"],
-      icon: <ImageIcon size={18} />,
-      command: ({ editor, range }: CommandProps) => {
-        editor.chain().focus().deleteRange(range).run();
-        // upload image
-        const input = document.createElement("input");
-        input.type = "file";
-        input.accept = "image/*";
-        input.onchange = async () => {
-          if (input.files?.length) {
-            const file = input.files[0];
-            const pos = editor.view.state.selection.from;
-            startImageUpload(file, editor.view, pos);
-          }
-        };
-        input.click();
-      },
     },
   ].filter((item) => {
     if (typeof query === "string" && query.length > 0) {
@@ -254,11 +102,16 @@ const CommandList = ({
   editor: any;
   range: any;
 }) => {
+  const [personalityType] = useLocalStorage(
+    "personalityType",
+    'INFP',
+  );
+  console.log('slash commands', personalityType);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const { complete, isLoading } = useCompletion({
     id: "novel",
-    api: "/api/generate",
+    api: `/api/generate?personalityType=${personalityType}`,
     onResponse: (response) => {
       if (response.status === 429) {
         toast.error("You have reached your request limit for the day.");

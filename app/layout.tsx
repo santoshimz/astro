@@ -6,10 +6,9 @@ import { ReactNode } from "react";
 import Providers from "./providers";
 
 const title =
-  "Novel – Notion-style WYSIWYG editor with AI-powered autocompletions";
+  "Personality test";
 const description =
-  "Novel is a Notion-style WYSIWYG editor with AI-powered autocompletions. Built with Tiptap, OpenAI, and Vercel AI SDK.";
-
+  "Personality test";
 export const metadata: Metadata = {
   title,
   description,
